@@ -1,9 +1,12 @@
 #include "initialization.h"
 
+#define TARGET_WIFI_SSID "<target wifi ssid>"
+#define TARGET_WIFI_PASSWORD "<target wifi password>"
+
 #define TARGET_WIFI_CONFIG() {                                                                  \
     .sta = {                                                                                    \
-        .ssid = "ANDROMEDA",                                                                    \
-        .password = "elmacik.ph796",                                                            \
+        .ssid = TARGET_WIFI_SSID,                                                               \
+        .password = TARGET_WIFI_PASSWORD,                                                       \
         .threshold.authmode = WIFI_AUTH_WPA2_PSK                                                \
     },                                                                                          \
 }
