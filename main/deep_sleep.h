@@ -6,20 +6,11 @@
 
 #include "tcp_client.h"
 #include "initialization.h"
+#include "lookups.h"
+#include "pir_sensor.h"
+#include "door_sensor.h"
 
 #define ROOM_ID             0
-
-#define PIR_SENSOR_ESP32
-
-#ifdef PIR_SENSOR_ESP32
-#include "pir_sensor.h"
-#include "rf_receiver.h"
-#endif
-
-#ifdef DOOR_SENSOR_ESP32
-#include "door_sensor.h"
-#include "rf_transmitter.h"
-#endif
 
 bool deep_sleep_state_initialize(void);
 bool deep_sleep_state_enter(void);
@@ -27,6 +18,5 @@ bool deep_sleep_state_enter(void);
 void deep_sleep_state_wakeup_task(void);
 bool deep_sleep_state_is_wakeup_task_completed(void);
 int deep_sleep_state_wakeup_count(void);
-
 
 #endif

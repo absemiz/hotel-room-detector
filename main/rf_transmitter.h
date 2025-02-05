@@ -2,6 +2,7 @@
 #define _HRD__RF_TRANSMITTER__H__
 
 #include <driver/gpio.h>
+#include <esp_log.h>
 
 #include "log_tags.h"
 

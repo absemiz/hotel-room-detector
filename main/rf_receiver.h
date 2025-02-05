@@ -2,6 +2,7 @@
 #define _HRD__RF_RECEIVER__H__
 
 #include <driver/gpio.h>
+#include <esp_log.h>
 
 #include "log_tags.h"
 

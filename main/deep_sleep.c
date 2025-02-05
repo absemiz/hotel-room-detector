@@ -13,15 +13,8 @@ bool deep_sleep_state_initialize(void)
     gpio_num_t wakeup_pin;
     int wakeup_level;
 
-    #ifdef PIR_SENSOR_ESP32
-        wakeup_pin = RF_RECEIVER_PIN;
-        wakeup_level = 1;
-    #endif
-
-    #ifdef DOOR_SENSOR_ESP32
-        wakeup_pin = DOOR_SENSOR_PIN;
-        wakeup_level = 1;
-    #endif
+    wakeup_pin = DOOR_SENSOR_PIN;
+    wakeup_level = 1;
 
     if ((error = esp_sleep_enable_ext0_wakeup(wakeup_pin, wakeup_level)) != ESP_OK)
     {
@@ -49,32 +42,15 @@ void deep_sleep_state_wakeup_task(void)
     _wakeup_count++;
     _wakeup_task_completed = false;
 
-    #ifdef PIR_SENSOR_ESP32
+    esp_netif_t *network_interface;
 
-        esp_netif_t *network_interface;
+    event_handler_set_on_wifi_got_ip(_on_wifi_got_ip);
 
-        event_handler_set_on_wifi_got_ip(_on_wifi_got_ip);
+    initialize_non_volatile_storage();
+    initialize_event_loop();
+    initialize_network_interface(&network_interface);
+    initialize_wifi();
 
-        initialize_non_volatile_storage();
-        initialize_event_loop();
-        initialize_network_interface(&network_interface);
-        initialize_wifi();
-
-    #endif
-
-    #ifdef DOOR_SENSOR_ESP32
-
-        rf_transmitter_initialize();
-        
-        rf_transmitter_start_stream();
-
-        vTaskDelay(pdMS_TO_TICKS(RF_TRANSMITTER_STREAM_PERIOD_IN_MS));
-
-        rf_transmitter_stop_stream();
-
-        _wakeup_task_completed = true;
-
-    #endif
 }
 
 bool deep_sleep_state_is_wakeup_task_completed(void)
@@ -89,31 +65,32 @@ int deep_sleep_state_wakeup_count(void)
 
 static void _on_wifi_got_ip(const ip_event_got_ip_t* got_ip_data)
 {
-    #ifdef PIR_SENSOR_ESP32
+    char message[128];
 
-        int message_size;
-        char* message_buffer = (char*)tcp_client_get_buffer();
+    pir_sensor_initialize();
+    pir_sensor_task(NULL);
 
-        ESP_LOGI(INFO_TAG, "Initializing TCP client.");
-        tcp_client_initialize();
-        ESP_LOGI(INFO_TAG, "Connecting TCP client.");
-        tcp_client_connect();
+    if (pir_sensor_high_count() > 0)
+    {
+        snprintf(message, sizeof(message), "{\"sensor\":\"pir\",\"room\":\"%d\",\"low\":\"%d\",\"high\":\"%d\"}", 
+            ROOM_ID, 
+            pir_sensor_low_count(), 
+            pir_sensor_high_count()
+        );
 
-        pir_sensor_initialize();
-        pir_sensor_task(NULL);
-            
-        message_size = snprintf(message_buffer, TCP_CLIENT_BUFFER_SIZE, "{\"sensor\":\"pir\",\"room\":\"%d\",\"low\":\"%d\",\"high\":\"%d\"}", ROOM_ID, pir_sensor_low_count(), pir_sensor_high_count()) + 1;
+        ESP_LOGI("ESP-NOW", "Sending message: %s", message);
 
-        ESP_LOGI(INFO_TAG, "Sending message.");
-        
-        tcp_client_send_message(message_buffer, message_size);
-        tcp_client_close();
-        
-        _wakeup_task_completed = true;
+        esp_err_t result = esp_now_send(target_esp_mac_address(), (uint8_t *)message, strlen(message));
 
-    #endif
-
-    #ifdef DOOR_SENSOR_ESP32
-
-    #endif
+        if (result == ESP_OK) 
+        {
+            ESP_LOGI("ESP-NOW", "Message sent successfully.");
+        } 
+        else 
+        {
+            ESP_LOGE("ESP-NOW", "Failed to send message, error: %d", result);
+        }
+    }
+    
+    _wakeup_task_completed = true;
 }

@@ -1,5 +1,7 @@
 #include "door_sensor.h"
 
+static const char* _log_tag = "DoorSensor";
+
 bool door_sensor_initialize(void)
 {
     esp_err_t error;
@@ -14,18 +16,18 @@ bool door_sensor_initialize(void)
 
     if ((error = gpio_config(&configuration)) != ESP_OK) 
     {
-        ESP_LOGE(DOOR_SENSOR_PIN, "gpio_config: (%s)", esp_err_to_name(error));
+        ESP_LOGE(_log_tag, "gpio_config: (%s)", esp_err_to_name(error));
 
         return false;
     }
 
     if ((error = gpio_set_level(DOOR_SENSOR_PIN, 0)) != ESP_OK) 
     {
-        ESP_LOGE(DOOR_SENSOR_PIN, "Failed to set initial GPIO level (error: %s)", esp_err_to_name(error));
+        ESP_LOGE(_log_tag, "Failed to set initial GPIO level (error: %s)", esp_err_to_name(error));
         return false;
     }
 
-    ESP_LOGI(DOOR_SENSOR_PIN, "Door sensor initialized successfully.");
+    ESP_LOGI(_log_tag, "Door sensor initialized successfully.");
 
     return true;
 }

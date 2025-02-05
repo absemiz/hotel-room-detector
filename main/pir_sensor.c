@@ -88,7 +88,7 @@ static void _pir_sensor_send_readings(void)
     char message[64];
     int message_size;
     
-    message_size = snprintf(message, sizeof(message), "{\"pir_readings\":\"%d\"}\n", _pir_sensor.readings);
+    message_size = snprintf(message, sizeof(message), "{\"pir_readings\":\"%lld\"}\n", _pir_sensor.readings);
 
     if (tcp_client_is_connected())
     {

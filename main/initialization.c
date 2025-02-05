@@ -11,6 +11,10 @@
     },                                                                                          \
 }
 
+static uint8_t _esp_now_peer_address[6] = {0x24, 0x6F, 0x28, 0x00, 0x00, 0x00};
+
+static void _on_esp_now_sent(const uint8_t *mac_address, esp_now_send_status_t status);
+
 bool initialize_non_volatile_storage(void)
 {
     esp_err_t error;
@@ -126,6 +130,96 @@ bool initialize_wifi(void)
     return true;
 }
 
+bool esp_now_initialize(void)
+{
+    esp_err_t error;
+
+    if (!initialize_network_interface(NULL) || !initialize_event_loop() || !initialize_wifi())
+    {
+        ESP_LOGE(ERROR_TAG, "Failed to initialize necessary network components.");
+        return false;
+    }
+
+    if ((error = esp_now_init()) != ESP_OK)
+    {
+        ESP_LOGE(ERROR_TAG, "esp_now_init: (%s)", esp_err_to_name(error));
+
+        deinitialize_wifi();
+        deinitialize_network_interface();
+
+        return false;
+    }
+
+    ESP_LOGI(INFO_TAG, "esp_now_init success.");
+
+    if ((error = esp_now_register_send_cb(_on_esp_now_sent)) != ESP_OK)
+    {
+        ESP_LOGE(ERROR_TAG, "esp_now_register_send_cb: (%s)", esp_err_to_name(error));
+
+        esp_now_deinit();
+        deinitialize_wifi();
+        deinitialize_network_interface();
+
+        return false;
+    }
+
+    ESP_LOGI(INFO_TAG, "esp_now_register_send_cb success.");
+
+    esp_now_peer_info_t peer_info = {};
+    memset(&peer_info, 0, sizeof(peer_info));
+    memcpy(peer_info.peer_addr, _esp_now_peer_address, 6);
+    peer_info.channel = 0;
+    peer_info.ifidx = ESP_IF_WIFI_STA;
+    peer_info.encrypt = false;
+
+    if ((error = esp_now_add_peer(&peer_info)) != ESP_OK)
+    {
+        ESP_LOGE(ERROR_TAG, "esp_now_add_peer: (%s)", esp_err_to_name(error));
+
+        esp_now_deinit();
+        deinitialize_wifi();
+        deinitialize_network_interface();
+
+        return false;
+    }
+
+    ESP_LOGI(INFO_TAG, "ESP-NOW peer added successfully.");
+
+    return true;
+}
+
+bool esp_now_initialize_receiver(void(*on_message_received)(const esp_now_recv_info_t *info, const uint8_t *data, int data_length))
+{
+    esp_err_t error;
+
+    if (!initialize_network_interface(NULL) || !initialize_event_loop() || !initialize_wifi())
+    {
+        ESP_LOGE(ERROR_TAG, "Failed to initialize necessary network components.");
+        return false;
+    }
+
+    if ((error = esp_now_init()) != ESP_OK)
+    {
+        ESP_LOGE(ERROR_TAG, "esp_now_init: (%s)", esp_err_to_name(error));
+        return false;
+    }
+
+    ESP_LOGI(INFO_TAG, "esp_now_init success.");
+
+    if ((error = esp_now_register_recv_cb(on_message_received)) != ESP_OK)
+    {
+        ESP_LOGE(ERROR_TAG, "esp_now_register_recv_cb: (%s)", esp_err_to_name(error));
+
+        esp_now_deinit();
+        return false;
+    }
+
+    ESP_LOGI(INFO_TAG, "esp_now_register_recv_cb success.");
+
+    return true;
+}
+
+
 void deinitialize_wifi(void)
 {
     esp_wifi_deinit();
@@ -134,4 +228,9 @@ void deinitialize_wifi(void)
 void deinitialize_network_interface(void)
 {
     esp_netif_deinit();
+}
+
+static void _on_esp_now_sent(const uint8_t *mac_addr, esp_now_send_status_t status) 
+{
+    ESP_LOGI("ESP-NOW", "Message sent with status: %s", status == ESP_NOW_SEND_SUCCESS ? "Success" : "Fail");
 }

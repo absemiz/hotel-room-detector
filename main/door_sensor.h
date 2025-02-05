@@ -2,6 +2,8 @@
 #define __HRD_DOOR_SENSOR_H__
 
 #include <driver/gpio.h>
+#include <esp_log.h>
+
 
 #define DOOR_SENSOR_PIN GPIO_NUM_4
 
